@@ -7,10 +7,11 @@ describe('AnalysisController', function() {
     this.$location = $injector.get('$location');
     this.$timeout = $injector.get('$timeout');
     this.AnalysisDataService = $injector.get('AnalysisDataService');
+    this.AceEditorService = $injector.get('AceEditorService');
     this.AlertService = $injector.get('AlertService');
     this.createController = function() {
       return $controller('AnalysisController',
-        {$scope: this.scope}, this.$location, this.$timeout, this.AlertService, this.AnalysisDataService);
+        {$scope: this.scope}, this.$location, this.$timeout, this.AlertService, this.AnalysisDataService, this.AceEditorService);
     };
     this._controller = this.createController();
   }));
@@ -24,15 +25,17 @@ describe('AnalysisController', function() {
   });
 
   describe('setup', function() {
-    it('loads list of open indices', function () {
+    it('loads list of open indices and init ace editor', function () {
       var indices = ['index1', 'index2'];
       this.AnalysisDataService.getOpenIndices = function(success, error) {
         success(indices);
       };
       spyOn(this.AnalysisDataService, "getOpenIndices").andCallThrough();
+      spyOn(this.scope, 'initEditor').andReturn();
       this.scope.setup();
       expect(this.AnalysisDataService.getOpenIndices).toHaveBeenCalledWith(jasmine.any(Function), jasmine.any(Function));
       expect(this.scope.indices).toEqual(indices);
+      expect(this.scope.initEditor).toHaveBeenCalled();
     });
 
     it('warns in case loading indices fails', function () {
@@ -41,9 +44,11 @@ describe('AnalysisController', function() {
       };
       spyOn(this.AnalysisDataService, "getOpenIndices").andCallThrough();
       spyOn(this.AlertService, "error").andCallThrough();
+      spyOn(this.scope, 'initEditor').andReturn();
       this.scope.setup();
       expect(this.AnalysisDataService.getOpenIndices).toHaveBeenCalledWith(jasmine.any(Function), jasmine.any(Function));
       expect(this.AlertService.error).toHaveBeenCalledWith('Error loading indices', 'kaput');
+      expect(this.scope.initEditor).toHaveBeenCalled();
     });
   });
 
@@ -148,6 +153,40 @@ describe('AnalysisController', function() {
       this.scope.analyzeByField('idx', 'fld', 'txt');
       expect(this.AnalysisDataService.analyzeByField).toHaveBeenCalledWith('idx', 'fld', 'txt', jasmine.any(Function), jasmine.any(Function));
       expect(this.scope.field_tokens).toEqual(undefined);
+    });
+  });
+
+  describe('analyzeCustom', function() {
+    it('analyzes text by custom analyzer field', function () {
+      var tokens = ['t', 't2'];
+      this.AnalysisDataService.analyzeCustom = function(index, tokenizer, filter, text, success, error) {
+        success(tokens);
+      };
+       this.scope.editor = {
+        getValue: function() {
+        }
+      };
+      spyOn(this.scope.editor, 'getValue').andReturn(['lowercase']);
+      spyOn(this.AnalysisDataService, "analyzeCustom").andCallThrough();
+      this.scope.analyzeCustom('idx', 'standard', 'txt');
+      expect(this.AnalysisDataService.analyzeCustom).toHaveBeenCalledWith('idx', 'standard', ['lowercase'], 'txt', jasmine.any(Function), jasmine.any(Function));
+      expect(this.scope.custom_tokens).toEqual(tokens);
+    });
+
+    it('alerts about error during analysis', function () {
+      this.AnalysisDataService.analyzeCustom = function(index, tokenizer, filter, text, success, error) {
+        error('kaput');
+      };
+      this.scope.editor = {
+        getValue: function() {
+        }
+      };
+      spyOn(this.scope.editor, 'getValue').andReturn(['lowercase']);
+      spyOn(this.AnalysisDataService, "analyzeCustom").andCallThrough();
+      spyOn(this.AlertService, "error").andCallThrough();
+      this.scope.analyzeCustom('idx', 'standard', 'txt');
+      expect(this.AnalysisDataService.analyzeCustom).toHaveBeenCalledWith('idx', 'standard', ['lowercase'], 'txt', jasmine.any(Function), jasmine.any(Function));
+      expect(this.AlertService.error).toHaveBeenCalledWith('Error analyzing text by custom analyzer', 'kaput');
     });
   });
 

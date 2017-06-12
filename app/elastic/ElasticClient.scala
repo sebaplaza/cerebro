@@ -84,6 +84,8 @@ trait ElasticClient {
 
   def analyzeTextByField(index: String, field: String, text: String, target: ElasticServer): Future[ElasticResponse]
 
+  def analyzeTextCustom(index: String, tokenizer: String, filter: JsValue, text: String, target: ElasticServer): Future[ElasticResponse]
+
   def analyzeTextByAnalyzer(index: String, analyzer: String, text: String, target: ElasticServer): Future[ElasticResponse]
 
   def getClusterSettings(target: ElasticServer): Future[ElasticResponse]

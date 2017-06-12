@@ -17,6 +17,7 @@ object AnalysisControllerSpec extends MockedServices {
       return index analyzers                             $analyzers
       return index fields                                $fields
       analyze by field                                   $analyzeByField
+      analyze custom                                     $analyzeCustom
       analyze by analyzer                                $analyzeByAnalyzer
                                                          ${step(play.api.Play.stop(application))}
       """
@@ -153,6 +154,70 @@ object AnalysisControllerSpec extends MockedServices {
         |  }
         |]
       """.stripMargin)
+    ensure(response, 200, expected)
+  }
+
+  def analyzeCustom = {
+    val expectedResponse = Json.parse(
+      """
+|{
+|  "tokens": [
+|    {
+|      "token": "sé",
+|      "start_offset": 0,
+|      "end_offset": 9,
+|      "type": "<ALPHANUM>",
+|      "position": 0
+|    },
+|    {
+|      "token": "séb",
+|      "start_offset": 0,
+|      "end_offset": 9,
+|      "type": "<ALPHANUM>",
+|      "position": 0
+|    }
+|  ]
+|}
+      """.stripMargin)
+
+    val filter = Json.parse(
+      """
+      |{
+      |  "filter": [
+      |    "lowercase",
+      |    {
+      |      "type": "edge_ngram",
+      |      "min_gram": 2,
+      |      "max_gram": 3
+      |    }
+      |  ]
+      |}
+      """.stripMargin)
+
+    client.analyzeTextCustom("foo", "standard", filter, "sébastiAn", ElasticServer("somehost")) returns Future.successful(Success(200, expectedResponse))
+    val params = Json.obj("host" -> "somehost", "index" -> "foo", "tokenizer" -> "standard", "filter" -> filter, "text" -> "sébastiAn")
+    val response = route(application, FakeRequest(POST, "/analysis/analyze/custom").withBody(params)).get
+
+    var expected = Json.parse(
+      """
+      |[
+      |  {
+      |    "token": "sé",
+      |    "start_offset": 0,
+      |    "end_offset": 9,
+      |    "type": "<ALPHANUM>",
+      |    "position": 0
+      |  },
+      |  {
+      |    "token": "séb",
+      |    "start_offset": 0,
+      |    "end_offset": 9,
+      |    "type": "<ALPHANUM>",
+      |    "position": 0
+      |  }
+      |]
+      """.stripMargin
+    )
     ensure(response, 200, expected)
   }
 

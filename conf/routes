@@ -35,6 +35,7 @@ POST        /analysis/analyzers                       controllers.AnalysisContro
 POST        /analysis/fields                          controllers.AnalysisController.getIndexFields
 POST        /analysis/analyze/analyzer                controllers.AnalysisController.analyzeByAnalyzer
 POST        /analysis/analyze/field                   controllers.AnalysisController.analyzeByField
+POST        /analysis/analyze/custom                  controllers.AnalysisController.analyzeCustom
 
 # Cluster Changes Controller
 POST        /cluster_changes                          controllers.ClusterChangesController.get

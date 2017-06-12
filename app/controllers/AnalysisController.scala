@@ -6,6 +6,7 @@ import controllers.auth.AuthenticationModule
 import elastic.{ElasticClient, Error, Success}
 import models.analysis.{IndexAnalyzers, IndexFields, OpenIndices, Tokens}
 import models.{CerebroResponse, Hosts}
+import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -41,6 +42,17 @@ class AnalysisController @Inject()(val authentication: AuthenticationModule,
     val field = request.get("field")
     val text = request.get("text")
     client.analyzeTextByField(index, field, text, request.target).map {
+      case Success(status, tokens) => CerebroResponse(status, Tokens(tokens))
+      case Error(status, error) => CerebroResponse(status, error)
+    }
+  }
+
+  def analyzeCustom = process { request =>
+    val index = request.get("index")
+    val tokenizer = request.get("tokenizer")
+    val filter =  request.getObjOpt("filter").getOrElse(Json.obj())
+    val text = request.get("text")
+    client.analyzeTextCustom(index, tokenizer, filter, text, request.target).map {
       case Success(status, tokens) => CerebroResponse(status, Tokens(tokens))
       case Error(status, error) => CerebroResponse(status, error)
     }
